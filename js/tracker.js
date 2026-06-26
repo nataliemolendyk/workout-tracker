@@ -18,58 +18,26 @@
   let customExercises = [];
 
   // ============================================================
-  // DOM REFS
+  // DOM HELPERS
   // ============================================================
   const $ = (id) => document.getElementById(id);
-  const $$ = (sel) => document.querySelectorAll(sel);
 
-  const dom = {
-    tabs: document.querySelectorAll('.tab-btn'),
-    tabContents: document.querySelectorAll('.tab-content'),
-    
-    // Profile
-    heightCm: $('height-cm'),
-    heightFt: $('height-ft'),
-    heightIn: $('height-in'),
-    weight: $('weight'),
-    age: $('age'),
-    sex: $('sex'),
-    goalWeight: $('goal-weight'),
-    activity: $('activity'),
-    workoutDays: $('workout-days'),
-    daysValue: $('days-value'),
-    protein: $('protein'),
-    carbs: $('carbs'),
-    fat: $('fat'),
-    saveProfile: $('save-profile'),
-
-    // Plan
-    bmr: $('bmr'),
-    tdee: $('tdee'),
-    targetCalories: $('target-calories'),
-    proteinG: $('protein-g'),
-    carbsG: $('carbs-g'),
-    fatG: $('fat-g'),
-
-    // Schedule
-    scheduleOutput: $('schedule-output'),
-    generateBtn: $('generate-schedule'),
-
-    // Library
-    searchInput: $('search-exercise'),
-    muscleFilter: $('filter-muscle'),
-    equipmentFilter: $('filter-equipment'),
-    exerciseGrid: $('exercise-grid'),
-    addExerciseForm: $('add-exercise-form'),
-    customList: $('custom-exercises-list'),
-
-    // Progress
-    progressDate: $('progress-date'),
-    progressWeight: $('progress-weight'),
-    logWeightBtn: $('log-weight'),
-    weightChart: $('weight-chart'),
-    progressList: $('progress-list')
+  // ============================================================
+  // LABELS
+  // ============================================================
+  const LABELS = {
+    muscle: {
+      chest: 'Chest', back: 'Back', shoulders: 'Shoulders',
+      arms: 'Arms', legs: 'Legs', core: 'Core', cardio: 'Cardio',
+      full_body: 'Full Body', upper: 'Upper Body', lower: 'Lower Body'
+    },
+    equipment: {
+      none: 'Bodyweight', dumbbell: 'Dumbbell', barbell: 'Barbell',
+      machine: 'Machine', cardio_machine: 'Cardio Machine'
+    }
   };
+
+  const label = (type, key) => LABELS[type]?.[key] || key;
 
   // ============================================================
   // 2. EXERCISE LIBRARY
@@ -173,33 +141,15 @@
   function showNotification(message) {
     const existing = document.querySelector('.notification');
     if (existing) existing.remove();
-
+    
     const el = document.createElement('div');
     el.className = 'notification';
     el.textContent = message;
-    Object.assign(el.style, {
-      position: 'fixed',
-      top: '20px',
-      right: '20px',
-      background: '#3b82f6',
-      color: '#fff',
-      padding: '12px 24px',
-      borderRadius: '8px',
-      fontWeight: '600',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-      zIndex: '1000',
-      opacity: '0',
-      transform: 'translateY(-10px)',
-      transition: 'all 0.3s ease'
-    });
     document.body.appendChild(el);
-    requestAnimationFrame(() => {
-      el.style.opacity = '1';
-      el.style.transform = 'translateY(0)';
-    });
+    
+    requestAnimationFrame(() => el.classList.add('show'));
     setTimeout(() => {
-      el.style.opacity = '0';
-      el.style.transform = 'translateY(-10px)';
+      el.classList.remove('show');
       setTimeout(() => el.remove(), 300);
     }, 2000);
   }
@@ -394,7 +344,7 @@
 
     const filtered = allExercises.filter(ex => {
       if (search && !ex.name.toLowerCase().includes(search)) return false;
-      if (muscle && ex.muscle !== muscle && ex.muscle !== muscle) return false;
+      if (muscle && ex.muscle !== muscle) return false;
       if (equipment && ex.equipment !== equipment) return false;
       return true;
     });
@@ -413,41 +363,14 @@
         <h4>${ex.name}</h4>
         <p class="ex-description">${ex.description || ''}</p>
         <p><strong>${ex.reps || ''}</strong></p>
-        <p>${getMuscleLabel(ex.muscle)} · ${getEquipmentLabel(ex.equipment)} · ${ex.difficulty}</p>
+        <p>${label('muscle', ex.muscle)} · ${label('equipment', ex.equipment)} · ${ex.difficulty}</p>
         <div class="exercise-tags">
-          <span class="tag tag-muscle">${getMuscleLabel(ex.muscle)}</span>
-          <span class="tag tag-equipment">${getEquipmentLabel(ex.equipment)}</span>
+          <span class="tag tag-muscle">${label('muscle', ex.muscle)}</span>
+          <span class="tag tag-equipment">${label('equipment', ex.equipment)}</span>
         </div>
       `;
       grid.appendChild(card);
     });
-  }
-
-  function getMuscleLabel(muscle) {
-    const labels = {
-      chest: 'Chest',
-      back: 'Back',
-      shoulders: 'Shoulders',
-      arms: 'Arms',
-      legs: 'Legs',
-      core: 'Core',
-      cardio: 'Cardio',
-      full_body: 'Full Body',
-      upper: 'Upper Body',
-      lower: 'Lower Body'
-    };
-    return labels[muscle] || muscle;
-  }
-
-  function getEquipmentLabel(equipment) {
-    const labels = {
-      none: 'Bodyweight',
-      dumbbell: 'Dumbbell',
-      barbell: 'Barbell',
-      machine: 'Machine',
-      cardio_machine: 'Cardio Machine'
-    };
-    return labels[equipment] || equipment;
   }
 
   // ============================================================
@@ -646,17 +569,21 @@
   // EVENT SETUP
   // ============================================================
   function setupEventListeners() {
-    // Tab switching
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const tabId = 'tab-' + this.dataset.tab;
-        switchTab(tabId);
-      });
+    // Tab switching with delegation
+    document.querySelector('.tabs')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.tab-btn');
+      if (btn) switchTab('tab-' + btn.dataset.tab);
     });
 
-    // Save profile
-    const saveBtn = document.getElementById('save-profile');
-    if (saveBtn) saveBtn.addEventListener('click', saveProfile);
+    // Profile inputs
+    const profileInputs = ['height-cm', 'height-ft', 'height-in', 'weight', 'age', 'goal-weight', 'activity'];
+    profileInputs.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', calculatePlan);
+        el.addEventListener('change', calculatePlan);
+      }
+    });
 
     // Workout days slider
     const slider = document.getElementById('workout-days');
@@ -675,16 +602,6 @@
           updateMacroSum();
           calculatePlan();
         });
-      }
-    });
-
-    // Profile inputs auto-update plan
-    const profileInputs = ['height-cm', 'height-ft', 'height-in', 'weight', 'age', 'goal-weight', 'activity'];
-    profileInputs.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('input', calculatePlan);
-        el.addEventListener('change', calculatePlan);
       }
     });
 
@@ -719,7 +636,7 @@
     const schedPdfBtn = document.getElementById('download-schedule-pdf');
     if (schedPdfBtn) schedPdfBtn.addEventListener('click', generateSchedulePDF);
 
-    // Height unit toggle
+    // Height unit toggle (special: shows/hides cm vs ft/in)
     document.querySelectorAll('#height-unit-buttons .unit-btn').forEach(btn => {
       btn.addEventListener('click', function() {
         document.querySelectorAll('#height-unit-buttons .unit-btn').forEach(b => b.classList.remove('active'));
@@ -731,20 +648,23 @@
       });
     });
 
-    // Weight unit toggle
-    document.querySelectorAll('#weight-unit-buttons .unit-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('#weight-unit-buttons .unit-btn').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-      });
-    });
+    // Weight and goal weight toggles via delegation
+    setupUnitToggle('weight-unit-buttons');
+    setupUnitToggle('goal-unit-buttons');
+  }
 
-    // Goal weight unit toggle
-    document.querySelectorAll('#goal-unit-buttons .unit-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        document.querySelectorAll('#goal-unit-buttons .unit-btn').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-      });
+  // ============================================================
+  // UNIT TOGGLE HELPER
+  // ============================================================
+  function setupUnitToggle(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    container.addEventListener('click', (e) => {
+      const btn = e.target.closest('.unit-btn');
+      if (!btn) return;
+      container.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
     });
   }
 
