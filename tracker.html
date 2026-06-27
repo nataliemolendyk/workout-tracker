@@ -5,33 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Workout Tracker</title>
   <link rel="stylesheet" href="css/tracker.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
   <!-- HEADER -->
   <header class="app-header">
     <div class="header-content">
-      <div class="header-logo">
-        <h1>Workout Tracker</h1>
-        <span>track your fitness</span>
+      <div class="header-top">
+        <div class="header-logo">
+          <h1>Workout Tracker</h1>
+          <span>track your fitness</span>
+        </div>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="profile">Profile</button>
+        <button class="tab-btn" data-tab="plan">Plan</button>
+        <button class="tab-btn" data-tab="schedule">Schedule</button>
+        <button class="tab-btn" data-tab="progress">Progress</button>
+        <button class="tab-btn" data-tab="library">Library</button>
       </div>
     </div>
   </header>
 
   <div class="container">
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="profile">Profile</button>
-      <button class="tab-btn" data-tab="plan">Plan</button>
-      <button class="tab-btn" data-tab="schedule">Schedule</button>
-      <button class="tab-btn" data-tab="library">Library</button>
-    </div>
 
     <!-- Profile Tab -->
     <div id="tab-profile" class="tab-content active">
       <div class="card">
         <h2>Your Profile</h2>
+        <div class="profile-grid">
 
         <!-- Height with unit toggle -->
         <div class="form-group">
@@ -99,22 +101,36 @@
           <label>Workout Days Per Week</label>
           <div style="display:flex;align-items:center;gap:12px;">
             <input type="range" id="workout-days" min="1" max="7" value="3">
-            <span id="workout-days-value" style="font-weight:700;color:#3b82f6;min-width:20px;">3</span>
+            <span id="workout-days-value" style="font-weight:700;color:#305543;min-width:20px;">3</span>
           </div>
         </div>
 
-        <!-- Macros -->
-        <div class="form-group">
-          <label>Macros (Protein / Carbs / Fat %)</label>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <input type="number" id="protein-pct" value="30" min="0" max="100" style="width:70px;">
-            <input type="number" id="carbs-pct" value="40" min="0" max="100" style="width:70px;">
-            <input type="number" id="fat-pct" value="30" min="0" max="100" style="width:70px;">
+        <!-- Macros (Optional - Toggle) -->
+        <div class="macros-toggle-wrap">
+          <label class="macros-switch">
+            <input type="checkbox" id="macros-toggle" checked>
+            <span class="macros-slider"></span>
+            <span class="macros-label-text">Macros</span>
+          </label>
+        </div>
+        <div id="macros-fields">
+          <div class="form-group">
+            <label>Protein / Carbs / Fat %</label>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <input type="number" id="protein-pct" value="30" min="0" max="100" style="width:70px;">
+              <input type="number" id="carbs-pct" value="40" min="0" max="100" style="width:70px;">
+              <input type="number" id="fat-pct" value="30" min="0" max="100" style="width:70px;">
+            </div>
+            <span id="macro-sum" style="font-size:0.85rem;color:rgba(0,0,0,0.55);font-weight:600;">Total: 100%</span>
           </div>
-          <span id="macro-sum" style="font-size:0.85rem;color:#64748b;">Total: 100%</span>
         </div>
 
-        <button id="save-profile" class="btn btn-primary">Save Profile</button>
+        </div>
+
+        <div class="form-actions">
+          <button id="save-profile" class="btn btn-primary">Save Profile</button>
+          <button id="reset-profile" class="btn btn-secondary">Clear &amp; Reset</button>
+        </div>
       </div>
     </div>
 
@@ -122,13 +138,13 @@
     <div id="tab-plan" class="tab-content">
       <div class="card">
         <h2>Your Plan</h2>
-        <div id="plan-results">
-          <div class="result-item"><span>BMR</span><span id="plan-bmr">—</span></div>
-          <div class="result-item"><span>TDEE</span><span id="plan-tdee">—</span></div>
-          <div class="result-item"><span>Target Calories</span><span id="plan-calories">—</span></div>
-          <div class="result-item"><span>Protein</span><span id="plan-protein">—</span></div>
-          <div class="result-item"><span>Carbs</span><span id="plan-carbs">—</span></div>
-          <div class="result-item"><span>Fat</span><span id="plan-fat">—</span></div>
+        <div id="plan-results" class="results-grid">
+          <div class="result-item"><span class="label">BMR</span><span class="value" id="plan-bmr">—</span></div>
+          <div class="result-item"><span class="label">TDEE</span><span class="value" id="plan-tdee">—</span></div>
+          <div class="result-item"><span class="label">Target Calories</span><span class="value" id="plan-calories">—</span></div>
+          <div class="result-item"><span class="label">Protein</span><span class="value" id="plan-protein">—</span></div>
+          <div class="result-item"><span class="label">Carbs</span><span class="value" id="plan-carbs">—</span></div>
+          <div class="result-item"><span class="label">Fat</span><span class="value" id="plan-fat">—</span></div>
         </div>
       </div>
     </div>
@@ -143,8 +159,35 @@
       </div>
     </div>
 
+    <!-- Progress Tab -->
+    <div id="tab-progress" class="tab-content">
+      <div class="card">
+        <h2>Weight Progress</h2>
+        <div class="progress-log-row">
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="progress-date">
+          </div>
+          <div class="form-group">
+            <label>Weight (kg)</label>
+            <input type="number" id="progress-weight" placeholder="e.g. 75" min="20" max="500" step="0.1">
+          </div>
+          <div class="form-group" style="align-self:flex-end;">
+            <button id="log-weight" class="btn btn-primary">Log Weight</button>
+          </div>
+          <div class="form-group" style="align-self:flex-end;">
+            <button id="clear-progress" class="btn btn-secondary">Clear Progress</button>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="weight-chart"></canvas>
+        </div>
+      </div>
+    </div>
+
     <!-- Library Tab -->
     <div id="tab-library" class="tab-content">
+      <div class="library-grid">
       <div class="card">
         <h2>Exercise Library</h2>
         <div class="filter-bar">
@@ -220,8 +263,15 @@
           <button type="submit" class="btn btn-primary">Add Exercise</button>
         </form>
       </div>
+      </div>
     </div>
   </div>
+
+  <footer class="app-footer">
+    <div class="footer-content">
+      <p class="footer-copy">&copy; 2026 Workout Tracker. All rights reserved.</p>
+    </div>
+  </footer>
 
   <script src="js/tracker.js"></script>
 </body>
