@@ -18,11 +18,6 @@
   let customExercises = [];
 
   // ============================================================
-  // DOM HELPERS
-  // ============================================================
-  const $ = (id) => document.getElementById(id);
-
-  // ============================================================
   // LABELS
   // ============================================================
   const LABELS = {
@@ -185,7 +180,8 @@
       workoutDays: parseInt(document.getElementById('workout-days')?.value) || 3,
       proteinPct: parseInt(document.getElementById('protein-pct')?.value) || 30,
       carbsPct: parseInt(document.getElementById('carbs-pct')?.value) || 40,
-      fatPct: parseInt(document.getElementById('fat-pct')?.value) || 30
+      fatPct: parseInt(document.getElementById('fat-pct')?.value) || 30,
+      macrosEnabled: document.getElementById('macros-toggle')?.checked ?? true
     };
 
     saveToStorage(STORAGE_KEYS.profile, profileData);
@@ -193,6 +189,54 @@
     calculatePlan();
     generateSchedule();
     showNotification('Profile saved!');
+  }
+
+  function resetProfile() {
+    if (!confirm('Clear all profile data and start fresh?')) return;
+
+    localStorage.removeItem(STORAGE_KEYS.profile);
+    localStorage.removeItem(STORAGE_KEYS.progress);
+    profile = null;
+    progress = [];
+
+    // Reset form fields to defaults
+    document.getElementById('height-cm').value = '';
+    document.getElementById('height-ft').value = '';
+    document.getElementById('height-in').value = '';
+    document.getElementById('weight').value = '';
+    document.getElementById('age').value = '';
+    document.getElementById('sex').value = 'male';
+    document.getElementById('goal-weight').value = '';
+    document.getElementById('activity').value = '1.55';
+    document.getElementById('workout-days').value = '3';
+    document.getElementById('protein-pct').value = '30';
+    document.getElementById('carbs-pct').value = '40';
+    document.getElementById('fat-pct').value = '30';
+
+    // Reset macros toggle
+    const macrosToggle = document.getElementById('macros-toggle');
+    const macrosFields = document.getElementById('macros-fields');
+    if (macrosToggle) macrosToggle.checked = true;
+    if (macrosFields) macrosFields.classList.remove('hidden');
+
+    const daysVal = document.getElementById('workout-days-value');
+    if (daysVal) daysVal.textContent = '3';
+
+    updateMacroSum();
+
+    // Clear plan results
+    ['plan-bmr', 'plan-tdee', 'plan-calories', 'plan-protein', 'plan-carbs', 'plan-fat'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '—';
+    });
+
+    // Clear schedule
+    const scheduleOutput = document.getElementById('schedule-output');
+    if (scheduleOutput) {
+      scheduleOutput.innerHTML = '<p>Complete your profile to generate a workout schedule.</p>';
+    }
+
+    showNotification('Profile has been reset!');
   }
 
   function loadProfile() {
@@ -214,6 +258,13 @@
 
       const daysVal = document.getElementById('workout-days-value');
       if (daysVal) daysVal.textContent = saved.workoutDays || 3;
+
+      // Restore macros toggle
+      const macrosToggle = document.getElementById('macros-toggle');
+      const macrosFields = document.getElementById('macros-fields');
+      const macrosEnabled = saved.macrosEnabled !== false;
+      if (macrosToggle) macrosToggle.checked = macrosEnabled;
+      if (macrosFields) macrosFields.classList.toggle('hidden', !macrosEnabled);
 
       updateMacroSum();
       calculatePlan();
@@ -250,13 +301,21 @@
     const targetCalories = Math.max(tdee + dailyCalorieAdjustment, 1200);
 
     // Macros
-    const proteinPct = parseInt(document.getElementById('protein-pct')?.value) || 30;
-    const carbsPct = parseInt(document.getElementById('carbs-pct')?.value) || 40;
-    const fatPct = parseInt(document.getElementById('fat-pct')?.value) || 30;
+    const macrosEnabled = document.getElementById('macros-toggle')?.checked ?? true;
+    let proteinPct, carbsPct, fatPct, proteinG, carbsG, fatG;
 
-    const proteinG = Math.round((targetCalories * (proteinPct / 100)) / 4);
-    const carbsG = Math.round((targetCalories * (carbsPct / 100)) / 4);
-    const fatG = Math.round((targetCalories * (fatPct / 100)) / 9);
+    if (macrosEnabled) {
+      proteinPct = parseInt(document.getElementById('protein-pct')?.value) || 30;
+      carbsPct = parseInt(document.getElementById('carbs-pct')?.value) || 40;
+      fatPct = parseInt(document.getElementById('fat-pct')?.value) || 30;
+
+      proteinG = Math.round((targetCalories * (proteinPct / 100)) / 4);
+      carbsG = Math.round((targetCalories * (carbsPct / 100)) / 4);
+      fatG = Math.round((targetCalories * (fatPct / 100)) / 9);
+    } else {
+      proteinPct = carbsPct = fatPct = 0;
+      proteinG = carbsG = fatG = 0;
+    }
 
     // Update DOM
     const setText = (id, val) => {
@@ -267,9 +326,9 @@
     setText('plan-bmr', `${bmr} kcal`);
     setText('plan-tdee', `${tdee} kcal`);
     setText('plan-calories', `${targetCalories} kcal`);
-    setText('plan-protein', `${proteinG}g (${proteinPct}%)`);
-    setText('plan-carbs', `${carbsG}g (${carbsPct}%)`);
-    setText('plan-fat', `${fatG}g (${fatPct}%)`);
+    setText('plan-protein', macrosEnabled ? `${proteinG}g (${proteinPct}%)` : '—');
+    setText('plan-carbs', macrosEnabled ? `${carbsG}g (${carbsPct}%)` : '—');
+    setText('plan-fat', macrosEnabled ? `${fatG}g (${fatPct}%)` : '—');
 
     // Also update old-style IDs if they exist
     setText('bmr-result', `${bmr} kcal`);
@@ -306,7 +365,7 @@
       card.className = 'schedule-card';
       card.innerHTML = `
         <h4>Day ${index + 1}</h4>
-        <p class="routine-label">${routine}</p>
+        <p><span class="tag tag-muscle">${routine}</span></p>
         <p class="routine-desc">${getRoutineDescription(routine)}</p>
       `;
       container.appendChild(card);
@@ -435,134 +494,131 @@
     showNotification(`Weight logged: ${weight} kg`);
   }
 
+  function clearProgress() {
+    if (!confirm('Clear all weight progress data?')) return;
+
+    localStorage.removeItem(STORAGE_KEYS.progress);
+    progress = [];
+    renderWeightChart();
+    showNotification('Weight progress cleared!');
+  }
+
   function renderWeightChart() {
     const canvas = document.getElementById('weight-chart');
     if (!canvas) return;
 
-    if (window.weightChartInstance) {
-      window.weightChartInstance.destroy();
-    }
-
     const savedProgress = loadFromStorage(STORAGE_KEYS.progress, []);
     progress = savedProgress;
 
-    if (progress.length === 0) {
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      return;
-    }
-
-    const labels = progress.map(p => {
-      const d = new Date(p.date);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    });
-    const data = progress.map(p => p.weight);
-
     const ctx = canvas.getContext('2d');
-    window.weightChartInstance = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Weight (kg)',
-          data,
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          fill: true,
-          tension: 0.3,
-          pointBackgroundColor: '#3b82f6',
-          pointRadius: 4,
-          pointHoverRadius: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false }
-        },
-        scales: {
-          y: {
-            beginAtZero: false,
-            grid: { color: 'rgba(0,0,0,0.05)' }
-          },
-          x: {
-            grid: { display: false }
-          }
-        }
-      }
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    const w = rect.width;
+    const h = rect.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (progress.length < 2) {
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.font = '14px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Log at least 2 weight entries to see the chart', w / 2, h / 2);
+      return;
+    }
+
+    const padding = { top: 20, right: 20, bottom: 30, left: 50 };
+    const chartW = w - padding.left - padding.right;
+    const chartH = h - padding.top - padding.bottom;
+
+    const values = progress.map(p => p.weight);
+    const minVal = Math.min(...values);
+    const maxVal = Math.max(...values);
+    const range = maxVal - minVal || 1;
+    const padding_range = range * 0.1;
+    const yMin = minVal - padding_range;
+    const yMax = maxVal + padding_range;
+    const yRange = yMax - yMin;
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = padding.top + (chartH / 4) * i;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(w - padding.right, y);
+      ctx.stroke();
+
+      // Y-axis labels
+      const val = yMax - (yRange / 4) * i;
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.font = '11px Georgia, serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(val.toFixed(1), padding.left - 8, y + 4);
+    }
+
+    // Draw line
+    const stepX = (progress.length > 1) ? chartW / (progress.length - 1) : 0;
+
+    // Fill area
+    ctx.beginPath();
+    progress.forEach((p, i) => {
+      const x = padding.left + i * stepX;
+      const y = padding.top + chartH - ((p.weight - yMin) / yRange) * chartH;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
     });
-  }
+    const lastX = padding.left + (progress.length - 1) * stepX;
+    const lastY = padding.top + chartH - ((values[values.length - 1] - yMin) / yRange) * chartH;
+    ctx.lineTo(lastX, padding.top + chartH);
+    ctx.lineTo(padding.left, padding.top + chartH);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(158, 195, 174, 0.15)';
+    ctx.fill();
 
-  // ============================================================
-  // PDF GENERATION
-  // ============================================================
-  function generatePlanPDF() {
-    if (typeof window.jspdf === 'undefined') {
-      showNotification('PDF library not loaded. Please check your internet connection.');
-      return;
-    }
+    // Draw line
+    ctx.beginPath();
+    progress.forEach((p, i) => {
+      const x = padding.left + i * stepX;
+      const y = padding.top + chartH - ((p.weight - yMin) / yRange) * chartH;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = '#9ec3ae';
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    // Draw points
+    progress.forEach((p, i) => {
+      const x = padding.left + i * stepX;
+      const y = padding.top + chartH - ((p.weight - yMin) / yRange) * chartH;
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#9ec3ae';
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    });
 
-    doc.setFontSize(22);
-    doc.text('Workout Plan', 20, 20);
+    // X-axis labels (show first, last, and maybe middle)
+    const labelIndices = [0];
+    if (progress.length > 2) labelIndices.push(Math.floor(progress.length / 2));
+    if (progress.length > 1) labelIndices.push(progress.length - 1);
 
-    doc.setFontSize(11);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 35);
-
-    doc.setFontSize(14);
-    doc.text('Nutrition Plan', 20, 55);
-
-    doc.setFontSize(11);
-    const getText = (id, fallback) => document.getElementById(id)?.textContent || fallback;
-
-    doc.text(`BMR: ${getText('plan-bmr', '—')}`, 20, 70);
-    doc.text(`TDEE: ${getText('plan-tdee', '—')}`, 20, 80);
-    doc.text(`Target Calories: ${getText('plan-calories', '—')}`, 20, 90);
-    doc.text(`Protein: ${getText('plan-protein', '—')}`, 20, 100);
-    doc.text(`Carbs: ${getText('plan-carbs', '—')}`, 20, 110);
-    doc.text(`Fat: ${getText('plan-fat', '—')}`, 20, 120);
-
-    doc.save('workout-plan.pdf');
-  }
-
-  function generateSchedulePDF() {
-    if (typeof window.jspdf === 'undefined') {
-      showNotification('PDF library not loaded. Please check your internet connection.');
-      return;
-    }
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    doc.setFontSize(22);
-    doc.text('Workout Schedule', 20, 20);
-
-    doc.setFontSize(11);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 35);
-
-    const container = document.getElementById('schedule-output');
-    if (container) {
-      const cards = container.querySelectorAll('.schedule-card');
-      let y = 55;
-      cards.forEach((card, i) => {
-        const day = card.querySelector('h4')?.textContent || `Day ${i + 1}`;
-        const routine = card.querySelector('.routine-label')?.textContent || '';
-        const desc = card.querySelector('.routine-desc')?.textContent || '';
-
-        doc.setFontSize(14);
-        doc.text(day, 20, y);
-        doc.setFontSize(11);
-        doc.text(routine, 20, y + 8);
-        doc.setFontSize(10);
-        doc.text(desc, 20, y + 16);
-        y += 30;
-      });
-    }
-
-    doc.save('workout-schedule.pdf');
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.font = '11px Georgia, serif';
+    ctx.textAlign = 'center';
+    labelIndices.forEach(i => {
+      const x = padding.left + i * stepX;
+      const d = new Date(progress[i].date);
+      const label = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      ctx.fillText(label, x, h - 6);
+    });
   }
 
   // ============================================================
@@ -625,16 +681,13 @@
     const logBtn = document.getElementById('log-weight');
     if (logBtn) logBtn.addEventListener('click', logWeight);
 
+    // Clear progress
+    const clearBtn = document.getElementById('clear-progress');
+    if (clearBtn) clearBtn.addEventListener('click', clearProgress);
+
     // Set today's date
     const dateInput = document.getElementById('progress-date');
     if (dateInput) dateInput.valueAsDate = new Date();
-
-    // PDF buttons
-    const planPdfBtn = document.getElementById('download-plan-pdf');
-    if (planPdfBtn) planPdfBtn.addEventListener('click', generatePlanPDF);
-
-    const schedPdfBtn = document.getElementById('download-schedule-pdf');
-    if (schedPdfBtn) schedPdfBtn.addEventListener('click', generateSchedulePDF);
 
     // Height unit toggle (special: shows/hides cm vs ft/in)
     document.querySelectorAll('#height-unit-buttons .unit-btn').forEach(btn => {
@@ -651,6 +704,20 @@
     // Weight and goal weight toggles via delegation
     setupUnitToggle('weight-unit-buttons');
     setupUnitToggle('goal-unit-buttons');
+
+    // Save & Reset profile
+    document.getElementById('save-profile')?.addEventListener('click', saveProfile);
+    document.getElementById('reset-profile')?.addEventListener('click', resetProfile);
+
+    // Macros toggle
+    const macrosToggle = document.getElementById('macros-toggle');
+    const macrosFields = document.getElementById('macros-fields');
+    if (macrosToggle && macrosFields) {
+      macrosToggle.addEventListener('change', function() {
+        macrosFields.classList.toggle('hidden', !this.checked);
+        calculatePlan();
+      });
+    }
   }
 
   // ============================================================
