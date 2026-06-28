@@ -571,7 +571,7 @@ body {
    APP HEADER - Clean dark header
    ============================================================ */
 .app-header {
-  background: url('images\polka dot.webp') repeat;
+  background: url('../images/polka dot.webp') repeat;
   background-position: 5px 0;
   position: sticky;
   top: 0;
