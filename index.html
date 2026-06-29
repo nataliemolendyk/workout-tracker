@@ -138,6 +138,14 @@
     <div id="tab-plan" class="tab-content">
       <div class="card">
         <h2>Your Plan</h2>
+        <div class="form-group" style="margin-bottom:16px;">
+          <label>Goal Timeframe</label>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <input type="number" id="custom-weeks" value="12" min="1" max="104" style="width:80px;">
+            <span style="color:rgba(0,0,0,0.55);">weeks</span>
+          </div>
+          <small style="color:rgba(0,0,0,0.45);">How many weeks to reach your goal weight</small>
+        </div>
         <div id="plan-results" class="results-grid">
           <div class="result-item"><span class="label">BMR</span><span class="value" id="plan-bmr">—</span></div>
           <div class="result-item"><span class="label">TDEE</span><span class="value" id="plan-tdee">—</span></div>

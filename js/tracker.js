@@ -632,7 +632,7 @@
     });
 
     // Profile inputs
-    const profileInputs = ['height-cm', 'height-ft', 'height-in', 'weight', 'age', 'goal-weight', 'activity'];
+    const profileInputs = ['height-cm', 'height-ft', 'height-in', 'weight', 'age', 'goal-weight', 'activity', 'custom-weeks'];
     profileInputs.forEach(id => {
       const el = document.getElementById(id);
       if (el) {
